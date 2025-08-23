@@ -1,0 +1,151 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/cupertino.dart';
+import 'package:http/http.dart' as http;
+import 'package:link_io/src/model/user_model.dart';
+import 'package:link_io/src/provider/user_detail_provider.dart';
+import 'package:mime/mime.dart';
+import 'package:http_parser/http_parser.dart';
+import 'package:provider/provider.dart';
+
+class UserAuthService with ChangeNotifier {
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+
+  void setLoading(bool val) {
+    _isLoading = val;
+    notifyListeners();
+  }
+
+  Future<Map<String, dynamic>> userRegister({
+    required String fullName,
+    required String userName,
+    required String email,
+    required String password,
+    required String phone,
+    required String gender,
+    required File profileImage,
+    required String accountType,
+  }) async {
+    setLoading(true);
+    try {
+      final uri = Uri.parse('http://10.0.2.2:8000/api/users/register');
+      var request = http.MultipartRequest('POST', uri);
+
+      request.fields.addAll({
+        'fullName': fullName,
+        'userName': userName,
+        'email': email,
+        'password': password,
+        'phone': phone,
+        'gender': gender,
+        'accountType': accountType,
+      });
+
+      final mimeTypeData = lookupMimeType(profileImage.path)!.split('/');
+      request.files.add(await http.MultipartFile.fromPath(
+        'profileImage',
+        profileImage.path,
+        contentType: MediaType(mimeTypeData[0], mimeTypeData[1]),
+      ));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      final responseData = json.decode(response.body);
+
+      setLoading(false);
+
+      if (response.statusCode == 201) {
+        return {
+          "success": true,
+          "message": responseData['message'],
+          "data": responseData['user'],
+          "token": responseData['token'],
+        };
+      } else {
+        return {
+          "success": false,
+          "message": responseData['message'] ?? 'Registration failed',
+        };
+      }
+    } on SocketException {
+      setLoading(false);
+      return {"success": false, "message": "No Internet Connection"};
+    } catch (error) {
+      setLoading(false);
+      return {"success": false, "message": error.toString()};
+    }
+  }
+
+
+  //user login method
+  // user login method
+  Future<Map<String, dynamic>> userLogin({
+    required String email,
+    required String password,
+    required BuildContext context,
+  }) async {
+    try {
+      final url = Uri.parse('http://10.0.2.2:8000/api/users/login'); // Android emulator
+      final userDetailProvider = Provider.of<UserDetailProvider>(context, listen: false);
+
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": email, "password": password}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data['success'] == true) {
+          final userJson = data['user'];
+
+          // Map API response to UserModel including token
+          final user = UserModel(
+            token: data['token'] ?? '', // ✅ token yaha se aata hai
+            id: userJson['_id'] ?? '',
+            fullName: userJson['fullName'] ?? '',
+            username: userJson['username'] ?? '',
+            email: userJson['email'] ?? '',
+            phone: userJson['phone'] ?? '',
+            gender: userJson['gender'] ?? '',
+            profileImage: userJson['profileImage'] ?? '',
+            accountType: userJson['accountType'] ?? 'Student',
+            education: userJson['education'] ?? '',
+            skills: List<String>.from(userJson['skills'] ?? []),
+            jobTitle: userJson['jobTitle'] ?? '',
+            bio: userJson['bio'] ?? '',
+            location: userJson['location'] ?? '',
+            links: List<String>.from(userJson['links'] ?? []),
+            privacyPublic: userJson['privacyPublic'] ?? true,
+            followers: List<String>.from(userJson['followers'] ?? []),
+            following: List<String>.from(userJson['following'] ?? []),
+          );
+
+          // Save user + token in SharedPreferences via provider
+          await userDetailProvider.saveUserData(user, token: data['token'] ?? '');
+
+          print("✅ Login successful. User saved in SharedPreferences");
+          print("Token: ${user.token}");
+          print("User ID: ${user.id}");
+
+          return {
+            "success": true,
+            "message": data['message'] ?? "Login successful",
+            "token": data['token'],
+            "user": user,
+          };
+        } else {
+          return {"success": false, "message": data['message'] ?? "Login failed"};
+        }
+      } else {
+        final data = jsonDecode(response.body);
+        return {"success": false, "message": data['message'] ?? "Login failed"};
+      }
+    } catch (error) {
+      return {"success": false, "message": error.toString()};
+    }
+  }
+
+}
