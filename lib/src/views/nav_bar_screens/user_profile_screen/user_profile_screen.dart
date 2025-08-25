@@ -102,14 +102,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               _buildStatColumn(
-                                  "Posts", "${postProvider.posts.length}", isDark),
+                                "Posts",
+                                "${postProvider.posts.where((post) => post.user.id == userProvider.currentUser!.id).length}",
+                                isDark,
+                              ),
                               _buildStatColumn(
                                   "Followers",
-                                  "${user.followers?.length ?? 0}",
+                                  "${user.followers.length ?? 0}",
                                   isDark),
                               _buildStatColumn(
                                   "Following",
-                                  "${user.following?.length ?? 0}",
+                                  "${user.following.length ?? 0}",
                                   isDark),
                             ],
                           ),
@@ -188,20 +191,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   : GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: postProvider.posts.length,
-                gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
+                itemCount: postProvider.userPosts.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
                   mainAxisSpacing: 2,
                   crossAxisSpacing: 2,
                 ),
                 itemBuilder: (context, index) {
-                  final post = postProvider.posts[index];
-                  return (post.image != null &&
-                      post.image!.isNotEmpty)
+                  final post = postProvider.userPosts[index];
+                  return (post.image != null && post.image!.isNotEmpty)
                       ? Image.network(post.image!, fit: BoxFit.cover)
-                      : Image.asset("assets/image/default.jpg",
-                      fit: BoxFit.cover);
+                      : Image.asset("assets/image/default.jpg", fit: BoxFit.cover);
                 },
               ),
             ],

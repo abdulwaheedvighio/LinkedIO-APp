@@ -113,31 +113,21 @@ class PostProviderService with ChangeNotifier {
       final token = userDetailProvider.currentUser!.token;
 
       final response = await http.get(
-        Uri.parse("$_baseUrl/user/$userId"), // ✅ fixed URL
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
+        Uri.parse("$_baseUrl/user/$userId"),
+        headers: {"Authorization": "Bearer $token"},
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
-        if (data is List) {
-          _userPosts = data
-              .map<PostModel>((postJson) => PostModel.fromJson(postJson))
-              .toList();
-        } else {
-          _userPosts = [];
-        }
-
+        _userPosts = (data as List)
+            .map<PostModel>((json) => PostModel.fromJson(json))
+            .toList();
         _setLoading(false);
       } else {
-        _setError("Failed to fetch user posts: ${response.body}");
+        _setError("Failed to fetch user posts");
       }
-    } catch (error) {
-      _setError(error.toString());
-      print("❌ Error fetching user posts: $error");
+    } catch (e) {
+      _setError(e.toString());
     }
   }
 

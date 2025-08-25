@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:link_io/src/core/utils/utils.dart';
+import 'package:link_io/src/views/nav_bar_screens/notification_screen.dart';
 import 'package:link_io/src/views/nav_bar_screens/post_upload_screen/post_upload_screen.dart';
 import 'package:link_io/src/views/nav_bar_screens/user_profile_screen/user_profile_screen.dart';
 import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
@@ -24,7 +25,7 @@ class _RootScreenState extends State<RootScreen> {
     HomePage(),
     Center(child: Text('Search Screen', style: TextStyle(fontSize: 24))),
     PostUploadScreen(),
-    Center(child: Text('Notifications Screen', style: TextStyle(fontSize: 24))),
+    NotificationScreen(),
     UserProfileScreen(),
   ];
 

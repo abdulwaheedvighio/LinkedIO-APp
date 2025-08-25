@@ -43,7 +43,7 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
-            themeMode: ThemeMode.dark,
+            themeMode: ThemeMode.light,
         home: const SplashScreen(),
         routes: {
           SplashScreen.routeName : (context) => SplashScreen(),
