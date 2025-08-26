@@ -1,5 +1,5 @@
 class UserModel {
-  final String token;
+  final String token; // add this
   final String id;
   final String fullName;
   final String username;
@@ -9,7 +9,7 @@ class UserModel {
   final String profileImage;
   final String accountType;
 
-  // Extra fields
+  // Extra fields...
   final String education;
   final List<String> skills;
   final String jobTitle;
@@ -20,9 +20,7 @@ class UserModel {
   final List<String> followers;
   final List<String> following;
   final List<String> friends;
-  final List<dynamic> notifications; // notifications ka structure alag banega
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
+  final List<String> notifications;
 
   UserModel({
     required this.token,
@@ -45,36 +43,33 @@ class UserModel {
     this.following = const [],
     this.friends = const [],
     this.notifications = const [],
-    this.createdAt,
-    this.updatedAt,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+
     final user = json['user'] ?? {};
 
     return UserModel(
       token: json['token'] ?? '',
-      id: user['_id'] ?? '',
-      fullName: user['fullName'] ?? '',
-      username: user['username'] ?? '',
-      email: user['email'] ?? '',
-      phone: user['phone'] ?? '',
-      gender: user['gender'] ?? '',
-      profileImage: user['profileImage'] ?? '',
-      accountType: user['accountType'] ?? 'Student',
-      education: user['education'] ?? '',
-      skills: List<String>.from(user['skills'] ?? []),
-      jobTitle: user['jobTitle'] ?? '',
-      bio: user['bio'] ?? '',
-      location: user['location'] ?? '',
-      links: List<String>.from(user['links'] ?? []),
-      privacyPublic: user['privacyPublic'] ?? true,
-      followers: List<String>.from(user['followers'] ?? []),
-      following: List<String>.from(user['following'] ?? []),
+      id: json['_id'] ?? json['id'] ?? '',
+      fullName: json['fullName'] ?? '',
+      username: json['username'] ?? '',
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? '',
+      gender: json['gender'] ?? '',
+      profileImage: json['profileImage'] ?? '',
+      accountType: json['accountType'] ?? 'Student',
+      education: json['education'] ?? '',
+      skills: List<String>.from(json['skills'] ?? []),
+      jobTitle: json['jobTitle'] ?? '',
+      bio: json['bio'] ?? '',
+      location: json['location'] ?? '',
+      links: List<String>.from(json['links'] ?? []),
+      privacyPublic: json['privacyPublic'] ?? true,
+      followers: List<String>.from(json['followers'] ?? []),
+      following: List<String>.from(json['following'] ?? []),
       friends: List<String>.from(user['friends'] ?? []),
-      notifications: List<dynamic>.from(user['notifications'] ?? []),
-      createdAt: user['createdAt'] != null ? DateTime.parse(user['createdAt']) : null,
-      updatedAt: user['updatedAt'] != null ? DateTime.parse(user['updatedAt']) : null,
+      notifications: List<String>.from(user['notifications'] ?? []),
     );
   }
 
@@ -100,8 +95,6 @@ class UserModel {
       'following': following,
       'friends': friends,
       'notifications': notifications,
-      'createdAt': createdAt?.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 }

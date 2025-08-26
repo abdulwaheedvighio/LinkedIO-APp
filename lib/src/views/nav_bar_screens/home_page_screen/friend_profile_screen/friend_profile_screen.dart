@@ -3,6 +3,7 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:link_io/src/core/utils/utils.dart';
 import 'package:link_io/src/model/post_model.dart' as auth;
 import 'package:link_io/src/services/post_provider_service.dart';
+import 'package:link_io/src/services/user_auth_service.dart';
 import 'package:link_io/src/widget/custom_text_widget.dart';
 import 'package:provider/provider.dart';
 
@@ -162,18 +163,39 @@ class _FriendProfileScreenState extends State<FriendProfileScreen>
                     ),
                     const SizedBox(height: 15),
                     // Follow Button
+                    // Follow Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                          isFollowing ? Colors.grey[800] : Colors.blue,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(2)),
+                          backgroundColor: isFollowing ? Colors.grey[800] : Colors.blue,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        onPressed: () {
-                          setState(() => isFollowing = !isFollowing);
+                        onPressed: () async {
+                          if (!isFollowing) {
+                            // ✅ Call sendFollowRequest service
+                            final userAuthService = Provider.of<UserAuthService>(context, listen: false);
+                            final result = await userAuthService.sendFollowRequest(
+                              targetUserId: widget.user.id ?? "",
+                              context: context,
+                            );
+
+                            if (result["success"] == true) {
+                              setState(() => isFollowing = true);
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(result["message"])),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("❌ ${result["message"]}")),
+                              );
+                            }
+                          } else {
+                            // Agar unfollow ka feature bhi banana hai to yaha logic ayega
+                            setState(() => isFollowing = false);
+                          }
                         },
                         child: CustomTextWidget(
                           text: isFollowing ? "Following" : "Follow",

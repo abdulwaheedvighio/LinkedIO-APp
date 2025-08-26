@@ -151,19 +151,11 @@ class PostProviderService with ChangeNotifier {
       if (response.statusCode == 200 && data["success"] == true) {
         print("✅ Backend response: ${data["message"]}");
 
-        // 🔹 Update local posts list
+        // 🔹 Update local post with backend response
+        final updatedPost = PostModel.fromJson(data["post"]);
         final index = _posts.indexWhere((p) => p.id == postId);
         if (index != -1) {
-          final currentPost = _posts[index];
-          final userId = userDetailProvider.currentUser!.id;
-
-          if (currentPost.likes.any((like) => like.userId == userId)) {
-            currentPost.likes
-                .removeWhere((like) => like.userId == userId); // unlike
-          } else {
-            currentPost.likes
-                .add(LikeModel(userId: userId, createdAt: DateTime.now()));
-          }
+          _posts[index] = updatedPost;
           notifyListeners();
         }
 

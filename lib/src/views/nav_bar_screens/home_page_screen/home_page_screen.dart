@@ -134,10 +134,9 @@ class _HomePageState extends State<HomePage> {
                           radius: 35,
                           backgroundImage: isYourStory
                               ? (currentUser?.profileImage != null
-                              ? NetworkImage(currentUser!.profileImage)
-                              : const AssetImage("assets/image/default.jpg")
-                          as ImageProvider) // ✅ Apni image
-                              : AssetImage(story["image"]!), // ✅ Dummy image
+                              ? NetworkImage(currentUser!.profileImage) as ImageProvider
+                              : const AssetImage("assets/image/default.jpg"))
+                              : AssetImage(story["image"]!) as ImageProvider,
                         ),
                       ),
                     ),

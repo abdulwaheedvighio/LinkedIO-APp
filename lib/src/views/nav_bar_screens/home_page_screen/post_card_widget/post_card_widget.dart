@@ -10,19 +10,32 @@ import 'package:link_io/src/views/nav_bar_screens/home_page_screen/friend_profil
 import 'package:link_io/src/widget/custom_text_widget.dart';
 import 'package:provider/provider.dart';
 
-class PostCardWidget extends StatelessWidget {
+class PostCardWidget extends StatefulWidget {
   final post.PostModel postItem;
 
   const PostCardWidget({super.key, required this.postItem});
 
   @override
-  Widget build(BuildContext context) {
+  State<PostCardWidget> createState() => _PostCardWidgetState();
+}
+
+class _PostCardWidgetState extends State<PostCardWidget> {
+  late bool isLiked;
+  late int likeCount;
+
+  @override
+  void initState() {
+    super.initState();
     final userId =
         Provider.of<UserDetailProvider>(context, listen: false).currentUser!.id;
+    isLiked = widget.postItem.likes.any((like) => like.userId == userId);
+    likeCount = widget.postItem.likes.length;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final postProvider =
     Provider.of<PostProviderService>(context, listen: false);
-
-    final isLiked = postItem.likes.any((like) => like.userId == userId);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -31,36 +44,38 @@ class PostCardWidget extends StatelessWidget {
         ListTile(
           leading: CircleAvatar(
             radius: 25,
-            backgroundImage: (postItem.user.profileImage != null &&
-                postItem.user.profileImage!.isNotEmpty)
-                ? NetworkImage(postItem.user.profileImage!)
+            backgroundImage: (widget.postItem.user.profileImage != null &&
+                widget.postItem.user.profileImage!.isNotEmpty)
+                ? NetworkImage(widget.postItem.user.profileImage!)
                 : const AssetImage("assets/image/default.jpg")
             as ImageProvider,
           ),
           title: GestureDetector(
-            onTap: (){
+            onTap: () {
               Navigator.push(
-                  context, MaterialPageRoute(
-                  builder: (context)=> FriendProfileScreen(user: postItem.user,)));
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          FriendProfileScreen(user: widget.postItem.user)));
             },
             child: CustomTextWidget(
-              text: postItem.user.fullName,
+              text: widget.postItem.user.fullName,
               fontWeight: FontWeight.bold,
             ),
           ),
           subtitle: CustomTextWidget(
-            text: _timeAgo(postItem.createdAt),
+            text: _timeAgo(widget.postItem.createdAt),
             fontSize: 12,
             color: Colors.grey,
           ),
         ),
 
         // ✅ Post Image
-        if (postItem.image != null)
+        if (widget.postItem.image != null)
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(1),
             child: Image.network(
-              postItem.image!,
+              widget.postItem.image!,
               width: double.infinity,
               height: 400,
               fit: BoxFit.cover,
@@ -78,12 +93,24 @@ class PostCardWidget extends StatelessWidget {
                   color: Colors.red,
                 ),
                 onPressed: () async {
-                  await postProvider.likePost(postItem.id, context);
+                  // 🔥 Instant UI update
+                  setState(() {
+                    if (isLiked) {
+                      isLiked = false;
+                      likeCount--;
+                    } else {
+                      isLiked = true;
+                      likeCount++;
+                    }
+                  });
+
+                  // 🔄 Backend update
+                  await postProvider.likePost(widget.postItem.id, context);
                 },
               ),
               IconButton(
                 icon: const Icon(Ionicons.chatbubble_outline),
-                onPressed: () => _showComments(context, postItem),
+                onPressed: () => _showComments(context, widget.postItem),
               ),
               const Spacer(),
               IconButton(
@@ -98,28 +125,29 @@ class PostCardWidget extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: CustomTextWidget(
-            text: "${postItem.likes.length} likes",
+            text: "$likeCount likes",
             fontWeight: FontWeight.bold,
           ),
         ),
 
         // ✅ Caption + Hashtags
-        if (postItem.caption.isNotEmpty || postItem.hashtags.isNotEmpty)
+        if (widget.postItem.caption.isNotEmpty ||
+            widget.postItem.hashtags.isNotEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (postItem.caption.isNotEmpty)
+                if (widget.postItem.caption.isNotEmpty)
                   CustomTextWidget(
-                    text: postItem.caption,
+                    text: widget.postItem.caption,
                     fontWeight: FontWeight.w500,
                   ),
-                if (postItem.hashtags.isNotEmpty)
+                if (widget.postItem.hashtags.isNotEmpty)
                   Wrap(
                     spacing: 6,
                     runSpacing: -6,
-                    children: postItem.hashtags
+                    children: widget.postItem.hashtags
                         .map(
                           (tag) => Text(
                         "#$tag",
@@ -140,7 +168,7 @@ class PostCardWidget extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: Text(
-            "${postItem.comments.length} comments • ${_timeAgo(postItem.createdAt)}",
+            "${widget.postItem.comments.length} comments • ${_timeAgo(widget.postItem.createdAt)}",
             style: const TextStyle(color: Colors.grey, fontSize: 12),
           ),
         ),
@@ -253,7 +281,8 @@ class PostCardWidget extends StatelessWidget {
                                           style: TextButton.styleFrom(
                                             padding: EdgeInsets.zero,
                                             minimumSize: const Size(40, 20),
-                                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                            tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
                                           ),
                                           child: const Text(
                                             "Reply",
@@ -280,8 +309,8 @@ class PostCardWidget extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: isDark ? AppColors.darkCard : AppColors.lightCard,
-
+                            color:
+                            isDark ? AppColors.darkCard : AppColors.lightCard,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
@@ -306,8 +335,7 @@ class PostCardWidget extends StatelessWidget {
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.send,
-                                    color: Colors.blue),
+                                icon: const Icon(Icons.send, color: Colors.blue),
                                 onPressed: () async {
                                   final text = commentController.text.trim();
                                   if (text.isNotEmpty) {

@@ -148,4 +148,40 @@ class UserAuthService with ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> sendFollowRequest({
+    required String targetUserId,
+    required BuildContext context,
+  })async{
+    setLoading(true);
+    try{
+      final userDetailProvider = Provider.of<UserDetailProvider>(context,listen: false);
+      final token = userDetailProvider.currentUser!.token;
+      final url = Uri.parse("http://10.0.2.2:8000/api/users/follow");
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token", // ✅ token include
+        },
+        body: jsonEncode({"targetUserId": targetUserId}),
+      );
+      final data = jsonDecode(response.body);
+      setLoading(false);
+
+      if (response.statusCode == 200 && data['success'] == true) {
+        return {
+          "success": true,
+          "message": data['message'] ?? "Follow request sent",
+        };
+      } else {
+        return {
+          "success": false,
+          "message": data['message'] ?? "Failed to send follow request",
+        };
+      }
+    }catch(error){
+      setLoading(false);
+      return {"success": false, "message": error.toString()};
+    }
+  }
 }
