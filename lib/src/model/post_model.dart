@@ -6,6 +6,7 @@ class PostModel {
   final String? image;
   final List<LikeModel> likes;
   final List<CommentModel> comments;
+  final List<NotificationModel> notifications; // optional: only if backend has it
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -17,6 +18,7 @@ class PostModel {
     this.image,
     required this.likes,
     required this.comments,
+    required this.notifications,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -30,17 +32,23 @@ class PostModel {
           ?.map((e) => e.toString())
           .toList() ??
           [],
-      image: json["imageUrl"] ?? json["image"], // ✅ backend dono case me handle
+      image: json["imageUrl"] ?? json["image"],
       likes: (json["likes"] as List<dynamic>?)
-          ?.map((l) => LikeModel.fromJson(l as Map<String, dynamic>))
+          ?.map((l) => LikeModel.fromJson(l))
           .toList() ??
           [],
       comments: (json["comments"] as List<dynamic>?)
-          ?.map((c) => CommentModel.fromJson(c as Map<String, dynamic>))
+          ?.map((c) => CommentModel.fromJson(c))
           .toList() ??
           [],
-      createdAt: DateTime.tryParse(json["createdAt"] ?? "") ?? DateTime.now(),
-      updatedAt: DateTime.tryParse(json["updatedAt"] ?? "") ?? DateTime.now(),
+      notifications: (json["notifications"] as List<dynamic>?)
+          ?.map((n) => NotificationModel.fromJson(n))
+          .toList() ??
+          [],
+      createdAt:
+      DateTime.tryParse(json["createdAt"] ?? "") ?? DateTime.now(),
+      updatedAt:
+      DateTime.tryParse(json["updatedAt"] ?? "") ?? DateTime.now(),
     );
   }
 
@@ -53,6 +61,7 @@ class PostModel {
       "image": image,
       "likes": likes.map((l) => l.toJson()).toList(),
       "comments": comments.map((c) => c.toJson()).toList(),
+      "notifications": notifications.map((n) => n.toJson()).toList(),
       "createdAt": createdAt.toIso8601String(),
       "updatedAt": updatedAt.toIso8601String(),
     };
@@ -112,7 +121,7 @@ class UserModel {
       id: json["_id"] ?? "",
       fullName: json["fullName"] ?? "",
       email: json["email"] ?? "",
-      bio: json["bio"]??"",
+      bio: json["bio"] ?? "",
       profileImage: json["profileImage"],
     );
   }
@@ -122,7 +131,7 @@ class UserModel {
       "_id": id,
       "fullName": fullName,
       "email": email,
-      "bio":bio,
+      "bio": bio,
       "profileImage": profileImage,
     };
   }
@@ -131,7 +140,7 @@ class UserModel {
 class CommentModel {
   final String? id;
   final String? text;
-  final UserModel? user;   // ✅ user object instead of just userId
+  final UserModel? user;
   final DateTime? createdAt;
 
   CommentModel({
@@ -162,6 +171,49 @@ class CommentModel {
       "text": text,
       "user": user?.toJson(),
       "createdAt": createdAt?.toIso8601String(),
+    };
+  }
+}
+
+class NotificationModel {
+  final String id;
+  final UserModel sender;
+  final String type; // follow / like / comment
+  final String status; // pending / accepted / rejected
+  final DateTime createdAt;
+
+  NotificationModel({
+    required this.id,
+    required this.sender,
+    required this.type,
+    required this.status,
+    required this.createdAt,
+  });
+
+  factory NotificationModel.fromJson(Map<String, dynamic> json) {
+    return NotificationModel(
+      id: json["_id"] ?? "",
+      sender: json["sender"] != null
+          ? UserModel.fromJson(json["sender"])
+          : UserModel(
+        id: "",
+        fullName: "",
+        email: "",
+        profileImage: "",
+      ),
+      type: json["type"] ?? "",
+      status: json["status"] ?? "pending",
+      createdAt: DateTime.tryParse(json["createdAt"] ?? "") ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "_id": id,
+      "sender": sender.toJson(),
+      "type": type,
+      "status": status,
+      "createdAt": createdAt.toIso8601String(),
     };
   }
 }

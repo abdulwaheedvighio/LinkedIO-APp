@@ -8,6 +8,21 @@ import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:provider/provider.dart';
 
+enum FollowStatus { self, following, pending, none }
+
+FollowStatus followStatusFromString(String s) {
+  switch (s) {
+    case "self":
+      return FollowStatus.self;
+    case "following":
+      return FollowStatus.following;
+    case "pending":
+      return FollowStatus.pending;
+    default:
+      return FollowStatus.none;
+  }
+}
+
 class UserAuthService with ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -17,6 +32,7 @@ class UserAuthService with ChangeNotifier {
     notifyListeners();
   }
 
+  // ---------------- Register ----------------
   Future<Map<String, dynamic>> userRegister({
     required String fullName,
     required String userName,
@@ -77,17 +93,16 @@ class UserAuthService with ChangeNotifier {
     }
   }
 
-
-  //user login method
-  // user login method
+  // ---------------- Login ----------------
   Future<Map<String, dynamic>> userLogin({
     required String email,
     required String password,
     required BuildContext context,
   }) async {
     try {
-      final url = Uri.parse('http://10.0.2.2:8000/api/users/login'); // Android emulator
-      final userDetailProvider = Provider.of<UserDetailProvider>(context, listen: false);
+      final url = Uri.parse('http://10.0.2.2:8000/api/users/login');
+      final userDetailProvider =
+      Provider.of<UserDetailProvider>(context, listen: false);
 
       final response = await http.post(
         url,
@@ -101,9 +116,8 @@ class UserAuthService with ChangeNotifier {
         if (data['success'] == true) {
           final userJson = data['user'];
 
-          // Map API response to UserModel including token
           final user = UserModel(
-            token: data['token'] ?? '', // ✅ token yaha se aata hai
+            token: data['token'] ?? '',
             id: userJson['_id'] ?? '',
             fullName: userJson['fullName'] ?? '',
             username: userJson['username'] ?? '',
@@ -123,12 +137,7 @@ class UserAuthService with ChangeNotifier {
             following: List<String>.from(userJson['following'] ?? []),
           );
 
-          // Save user + token in SharedPreferences via provider
           await userDetailProvider.saveUserData(user, token: data['token'] ?? '');
-
-          print("✅ Login successful. User saved in SharedPreferences");
-          print("Token: ${user.token}");
-          print("User ID: ${user.id}");
 
           return {
             "success": true,
@@ -148,23 +157,27 @@ class UserAuthService with ChangeNotifier {
     }
   }
 
+  // ---------------- Send Follow Request ----------------
   Future<Map<String, dynamic>> sendFollowRequest({
     required String targetUserId,
     required BuildContext context,
-  })async{
+  }) async {
     setLoading(true);
-    try{
-      final userDetailProvider = Provider.of<UserDetailProvider>(context,listen: false);
+    try {
+      final userDetailProvider =
+      Provider.of<UserDetailProvider>(context, listen: false);
       final token = userDetailProvider.currentUser!.token;
-      final url = Uri.parse("http://10.0.2.2:8000/api/users/follow");
+      final url = Uri.parse("http://10.0.2.2:8000/api/users/users/follow");
+
       final response = await http.post(
         url,
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer $token", // ✅ token include
+          "Authorization": "Bearer $token",
         },
         body: jsonEncode({"targetUserId": targetUserId}),
       );
+
       final data = jsonDecode(response.body);
       setLoading(false);
 
@@ -179,9 +192,97 @@ class UserAuthService with ChangeNotifier {
           "message": data['message'] ?? "Failed to send follow request",
         };
       }
-    }catch(error){
+    } catch (error) {
       setLoading(false);
       return {"success": false, "message": error.toString()};
+    }
+  }
+
+  // ---------------- Follow Status ----------------
+  Future<FollowStatus> getFollowStatus({
+    required String targetUserId,
+    required BuildContext context,
+  }) async {
+    try {
+      final userDetailProvider =
+      Provider.of<UserDetailProvider>(context, listen: false);
+      final token = userDetailProvider.currentUser?.token ?? '';
+      final url = Uri.parse(
+          "http://10.0.2.2:8000/api/users/users/$targetUserId/follow-status");
+
+      final response = await http.get(url, headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      });
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        return followStatusFromString(data['status'] ?? "none");
+      }
+      return FollowStatus.none;
+    } catch (_) {
+      return FollowStatus.none;
+    }
+  }
+
+  // ---------------- Respond to Follow Request ----------------
+  Future<Map<String, dynamic>> respondFollowRequest({
+    required String notificationId,
+    required String action, // "accept" | "reject"
+    required BuildContext context,
+  }) async {
+    setLoading(true);
+    try {
+      final userDetailProvider =
+      Provider.of<UserDetailProvider>(context, listen: false);
+      final token = userDetailProvider.currentUser?.token ?? '';
+      final url =
+      Uri.parse("http://10.0.2.2:8000/api/users/users/follow/respond");
+
+      final response = await http.post(url,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer $token",
+          },
+          body: jsonEncode({
+            "notificationId": notificationId,
+            "action": action,
+          }));
+
+      final data = jsonDecode(response.body);
+      setLoading(false);
+      final msg = data['message'] ?? data['msg'] ?? 'Success';
+      return {
+        "success": response.statusCode == 200,
+        "message": msg,
+      };
+    } catch (e) {
+      setLoading(false);
+      return {"success": false, "message": e.toString()};
+    }
+  }
+
+  // ---------------- Fetch Notifications ----------------
+  Future<List<Map<String, dynamic>>> fetchNotifications(
+      BuildContext context) async {
+    try {
+      final userDetailProvider =
+      Provider.of<UserDetailProvider>(context, listen: false);
+      final token = userDetailProvider.currentUser?.token ?? '';
+      final url = Uri.parse("http://10.0.2.2:8000/api/users/notifications");
+
+      final response = await http.get(url, headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      });
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        return List<Map<String, dynamic>>.from(data['notifications'] ?? []);
+      }
+      return [];
+    } catch (_) {
+      return [];
     }
   }
 }

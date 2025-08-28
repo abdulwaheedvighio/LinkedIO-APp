@@ -64,7 +64,7 @@ class PostProviderService with ChangeNotifier {
     }
   }
 
-  // ================= Get All Posts =================
+  // ================= Get All Posts ================= //
   Future<void> getPosts({required BuildContext context}) async {
     _setLoading(true);
     try {
@@ -101,7 +101,7 @@ class PostProviderService with ChangeNotifier {
     }
   }
 
-  // ================= Get Posts by User =================
+  // ================= Get Posts by User ================= //
   Future<void> getPostsByUserId({
     required String userId,
     required BuildContext context,
@@ -131,7 +131,7 @@ class PostProviderService with ChangeNotifier {
     }
   }
 
-  // ================= Like Post =================
+  // ================= Like Post ================= //
   Future<bool> likePost(String postId, BuildContext context) async {
     try {
       final userDetailProvider =

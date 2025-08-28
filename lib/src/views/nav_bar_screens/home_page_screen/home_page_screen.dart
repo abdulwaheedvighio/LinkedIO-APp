@@ -4,7 +4,9 @@ import 'package:link_io/src/core/utils/utils.dart';
 import 'package:link_io/src/provider/user_detail_provider.dart';
 import 'package:link_io/src/services/post_provider_service.dart';
 import 'package:link_io/src/views/nav_bar_screens/home_page_screen/post_card_widget/post_card_widget.dart';
+import 'package:link_io/src/views/notification_screen/notification_screen.dart';
 import 'package:link_io/src/widget/custom_text_widget.dart';
+import 'package:link_io/src/widget/skeleton_post_card_widget.dart';
 import 'package:provider/provider.dart';
 
 class HomePage extends StatefulWidget {
@@ -40,7 +42,7 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: CustomTextWidget(
-          text: "LinkIo",
+          text: "LinkedIo",
           fontWeight: FontWeight.bold,
           color: isDark ? AppColors.lightCard : AppColors.darkCard,
           fontSize: screenWidth * 0.055,
@@ -61,7 +63,14 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context)=> NotificationScreen(),
+                  ),
+              );
+            },
             icon: Icon(
               Icons.notifications_none,
               color: isDark ? AppColors.lightCard : AppColors.darkCard,
@@ -77,11 +86,29 @@ class _HomePageState extends State<HomePage> {
           storiesWidget(context),
           // Dynamic Posts Feed
           Expanded(
-            child: ListView.builder(
-              itemCount: Provider.of<PostProviderService>(context).posts.length,
-              itemBuilder: (context, index) {
-                final post = Provider.of<PostProviderService>(context).posts[index];
-                return PostCardWidget(postItem: post);
+            child: Consumer<PostProviderService>(
+              builder: (context, postProvider, child) {
+                if (postProvider.isLoading) {
+                  // ✅ Jab tak data load ho raha ho → Skeleton dikhaye
+                  return ListView.builder(
+                    itemCount: 5, // jitne skeleton cards chahiye
+                    itemBuilder: (context, index) => const PostCardLoadingWidget(),
+                  );
+                }
+
+                if (postProvider.posts.isEmpty) {
+                  // ✅ Agar data hi empty hai
+                  return const Center(child: Text("No posts available"));
+                }
+
+                // ✅ Data load ho gaya → actual posts dikhaye
+                return ListView.builder(
+                  itemCount: postProvider.posts.length,
+                  itemBuilder: (context, index) {
+                    final post = postProvider.posts[index];
+                    return PostCardWidget(postItem: post);
+                  },
+                );
               },
             ),
           ),

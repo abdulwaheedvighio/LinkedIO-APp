@@ -1,5 +1,7 @@
+import 'package:link_io/src/model/post_model.dart';
+
 class UserModel {
-  final String token; // add this
+  final String token;
   final String id;
   final String fullName;
   final String username;
@@ -20,7 +22,7 @@ class UserModel {
   final List<String> followers;
   final List<String> following;
   final List<String> friends;
-  final List<String> notifications;
+  final List<NotificationModel> notifications; // ✅ fixed
 
   UserModel({
     required this.token,
@@ -46,30 +48,32 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-
-    final user = json['user'] ?? {};
+    final user = json['user'] ?? json; // ✅ fallback
 
     return UserModel(
       token: json['token'] ?? '',
-      id: json['_id'] ?? json['id'] ?? '',
-      fullName: json['fullName'] ?? '',
-      username: json['username'] ?? '',
-      email: json['email'] ?? '',
-      phone: json['phone'] ?? '',
-      gender: json['gender'] ?? '',
-      profileImage: json['profileImage'] ?? '',
-      accountType: json['accountType'] ?? 'Student',
-      education: json['education'] ?? '',
-      skills: List<String>.from(json['skills'] ?? []),
-      jobTitle: json['jobTitle'] ?? '',
-      bio: json['bio'] ?? '',
-      location: json['location'] ?? '',
-      links: List<String>.from(json['links'] ?? []),
-      privacyPublic: json['privacyPublic'] ?? true,
-      followers: List<String>.from(json['followers'] ?? []),
-      following: List<String>.from(json['following'] ?? []),
+      id: user['_id'] ?? user['id'] ?? '',
+      fullName: user['fullName'] ?? '',
+      username: user['username'] ?? '',
+      email: user['email'] ?? '',
+      phone: user['phone'] ?? '',
+      gender: user['gender'] ?? '',
+      profileImage: user['profileImage'] ?? '',
+      accountType: user['accountType'] ?? 'Student',
+      education: user['education'] ?? '',
+      skills: List<String>.from(user['skills'] ?? []),
+      jobTitle: user['jobTitle'] ?? '',
+      bio: user['bio'] ?? '',
+      location: user['location'] ?? '',
+      links: List<String>.from(user['links'] ?? []),
+      privacyPublic: user['privacyPublic'] ?? true,
+      followers: List<String>.from(user['followers'] ?? []),
+      following: List<String>.from(user['following'] ?? []),
       friends: List<String>.from(user['friends'] ?? []),
-      notifications: List<String>.from(user['notifications'] ?? []),
+      notifications: (user['notifications'] as List<dynamic>?)
+          ?.map((n) => NotificationModel.fromJson(n))
+          .toList() ??
+          [],
     );
   }
 
@@ -94,7 +98,7 @@ class UserModel {
       'followers': followers,
       'following': following,
       'friends': friends,
-      'notifications': notifications,
+      'notifications': notifications.map((n) => n.toJson()).toList(),
     };
   }
 }

@@ -7,6 +7,7 @@ import 'package:link_io/src/services/user_auth_service.dart';
 import 'package:link_io/src/widget/custom_text_widget.dart';
 import 'package:provider/provider.dart';
 
+
 class FriendProfileScreen extends StatefulWidget {
   final auth.UserModel user;
 
@@ -22,7 +23,9 @@ class _FriendProfileScreenState extends State<FriendProfileScreen>
     with TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnim;
-  bool isFollowing = false;
+
+  FollowStatus _followStatus = FollowStatus.none;
+  bool _loading = false;
 
   @override
   void initState() {
@@ -32,11 +35,22 @@ class _FriendProfileScreenState extends State<FriendProfileScreen>
       ..forward();
     _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
-    // ✅ Fetch this friend's posts on init
-    Future.microtask(() {
+    // ✅ Fetch posts and follow status on init
+    Future.microtask(() async {
       final postProvider =
       Provider.of<PostProviderService>(context, listen: false);
       postProvider.getPostsByUserId(userId: widget.user.id!, context: context);
+
+      final userAuthService =
+      Provider.of<UserAuthService>(context, listen: false);
+      final status = await userAuthService.getFollowStatus(
+        targetUserId: widget.user.id ?? "",
+        context: context,
+      );
+
+      if (mounted) {
+        setState(() => _followStatus = status);
+      }
     });
   }
 
@@ -49,10 +63,9 @@ class _FriendProfileScreenState extends State<FriendProfileScreen>
   Widget _buildStat(String number, String label) {
     return Column(
       children: [
-        Text(number,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        CustomTextWidget(text: number,fontWeight: FontWeight.bold, fontSize: 18),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+        CustomTextWidget(text: label,fontSize: 14, color: Colors.grey),
       ],
     );
   }
@@ -120,7 +133,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen>
                               fit: BoxFit.cover,
                             )
                                 : Image.asset(
-                              "assets/image/default.jpg", // default image
+                              "assets/image/default.jpg",
                               width: 95,
                               height: 95,
                               fit: BoxFit.cover,
@@ -133,7 +146,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen>
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
                               _buildStat(
-                                  "${postProvider.userPosts.length}", "Posts"), // ✅ FIX
+                                  "${postProvider.userPosts.length}", "Posts"),
                               _buildStat("1.4k", "Followers"),
                               _buildStat("100", "Following"),
                             ],
@@ -153,52 +166,75 @@ class _FriendProfileScreenState extends State<FriendProfileScreen>
                             fontWeight: FontWeight.bold,
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            widget.user.bio ?? "Mobile App Developer",
-                            style: const TextStyle(
-                                fontSize: 14, color: Colors.white),
+                          CustomTextWidget(
+                              text: widget.user.bio ?? "Mobile App Developer",
+                              fontSize: 14, color: Colors.white,
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 15),
-                    // Follow Button
-                    // Follow Button
+
+                    // ✅ Follow Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isFollowing ? Colors.grey[800] : Colors.blue,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
+                          backgroundColor: _followStatus == FollowStatus.none
+                              ? Colors.blue
+                              : _followStatus == FollowStatus.pending
+                              ? Colors.orange
+                              : Colors.grey[800],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        onPressed: () async {
-                          if (!isFollowing) {
-                            // ✅ Call sendFollowRequest service
-                            final userAuthService = Provider.of<UserAuthService>(context, listen: false);
+                        onPressed: _loading
+                            ? null
+                            : () async {
+                          final userAuthService =
+                          Provider.of<UserAuthService>(context, listen: false);
+
+                          if (_followStatus == FollowStatus.none) {
+                            // ✅ Send Follow Request
+                            setState(() => _loading = true);
                             final result = await userAuthService.sendFollowRequest(
                               targetUserId: widget.user.id ?? "",
                               context: context,
                             );
-
-                            if (result["success"] == true) {
-                              setState(() => isFollowing = true);
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(result["message"])),
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text("❌ ${result["message"]}")),
-                              );
-                            }
-                          } else {
-                            // Agar unfollow ka feature bhi banana hai to yaha logic ayega
-                            setState(() => isFollowing = false);
+                            setState(() {
+                              _loading = false;
+                              if (result["success"]) {
+                                _followStatus = FollowStatus.pending;
+                              }
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(result["message"])),
+                            );
+                          } else if (_followStatus == FollowStatus.following) {
+                            // ✅ Future: Unfollow API call
+                            setState(() => _followStatus = FollowStatus.none);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Unfollowed user")),
+                            );
                           }
                         },
-                        child: CustomTextWidget(
-                          text: isFollowing ? "Following" : "Follow",
+                        child: _loading
+                            ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                            : CustomTextWidget(
+                          text: _followStatus == FollowStatus.none
+                              ? "Follow"
+                              : _followStatus == FollowStatus.pending
+                              ? "Pending"
+                              : "Following",
                         ),
                       ),
                     ),
@@ -223,8 +259,7 @@ class _FriendProfileScreenState extends State<FriendProfileScreen>
                   : postProvider.userPosts.isEmpty
                   ? const Padding(
                 padding: EdgeInsets.all(20.0),
-                child: Text("No posts available",
-                    style: TextStyle(color: Colors.grey)),
+                child: CustomTextWidget(text: "No posts available",color: Colors.grey)
               )
                   : GridView.builder(
                 shrinkWrap: true,
@@ -333,10 +368,9 @@ class _FullScreenGalleryViewState extends State<FullScreenGalleryView> {
             left: 0,
             right: 0,
             child: Center(
-              child: Text(
-                "${_currentIndex + 1} / ${widget.images.length}",
-                style: const TextStyle(color: Colors.white, fontSize: 16),
-              ),
+              child: CustomTextWidget(
+                text: "${_currentIndex + 1} / ${widget.images.length}",
+                color: Colors.white, fontSize: 16),
             ),
           ),
         ],
