@@ -3,10 +3,10 @@ class PostModel {
   final UserModel user;
   final String caption;
   final List<String> hashtags;
-  final String? image;
+  final MediaModel? media; // 👈 image/video both
   final List<LikeModel> likes;
   final List<CommentModel> comments;
-  final List<NotificationModel> notifications; // optional: only if backend has it
+  final List<NotificationModel> notifications;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -15,7 +15,7 @@ class PostModel {
     required this.user,
     required this.caption,
     required this.hashtags,
-    this.image,
+    this.media,
     required this.likes,
     required this.comments,
     required this.notifications,
@@ -32,7 +32,7 @@ class PostModel {
           ?.map((e) => e.toString())
           .toList() ??
           [],
-      image: json["imageUrl"] ?? json["image"],
+      media: json["media"] != null ? MediaModel.fromJson(json["media"]) : null,
       likes: (json["likes"] as List<dynamic>?)
           ?.map((l) => LikeModel.fromJson(l))
           .toList() ??
@@ -45,10 +45,8 @@ class PostModel {
           ?.map((n) => NotificationModel.fromJson(n))
           .toList() ??
           [],
-      createdAt:
-      DateTime.tryParse(json["createdAt"] ?? "") ?? DateTime.now(),
-      updatedAt:
-      DateTime.tryParse(json["updatedAt"] ?? "") ?? DateTime.now(),
+      createdAt: DateTime.tryParse(json["createdAt"] ?? "") ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json["updatedAt"] ?? "") ?? DateTime.now(),
     );
   }
 
@@ -58,7 +56,7 @@ class PostModel {
       "user": user.toJson(),
       "caption": caption,
       "hashtags": hashtags,
-      "image": image,
+      "media": media?.toJson(),
       "likes": likes.map((l) => l.toJson()).toList(),
       "comments": comments.map((c) => c.toJson()).toList(),
       "notifications": notifications.map((n) => n.toJson()).toList(),
@@ -67,6 +65,27 @@ class PostModel {
     };
   }
 }
+
+/// 🔥 Media model for image/video
+class MediaModel {
+  final String url;
+  final String type; // "image" or "video"
+
+  MediaModel({required this.url, required this.type});
+
+  factory MediaModel.fromJson(Map<String, dynamic> json) {
+    return MediaModel(
+      url: json["url"] ?? "",
+      type: json["type"] ?? "image",
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    "url": url,
+    "type": type,
+  };
+}
+
 
 class LikeModel {
   final String userId;
@@ -177,16 +196,18 @@ class CommentModel {
 
 class NotificationModel {
   final String id;
-  final UserModel sender;
+  final UserModel sender; // jisne notification trigger kiya
   final String type; // follow / like / comment
-  final String status; // pending / accepted / rejected
+  final String? status; // sirf follow request k liye
+  final String? postId; // like/comment kis post par hua
   final DateTime createdAt;
 
   NotificationModel({
     required this.id,
     required this.sender,
     required this.type,
-    required this.status,
+    this.status,
+    this.postId,
     required this.createdAt,
   });
 
@@ -195,14 +216,10 @@ class NotificationModel {
       id: json["_id"] ?? "",
       sender: json["sender"] != null
           ? UserModel.fromJson(json["sender"])
-          : UserModel(
-        id: "",
-        fullName: "",
-        email: "",
-        profileImage: "",
-      ),
+          : UserModel(id: "", fullName: "", email: "", profileImage: ""),
       type: json["type"] ?? "",
-      status: json["status"] ?? "pending",
+      status: json["status"], // only for follow
+      postId: json["postId"], // only for like/comment
       createdAt: DateTime.tryParse(json["createdAt"] ?? "") ?? DateTime.now(),
     );
   }
@@ -213,7 +230,9 @@ class NotificationModel {
       "sender": sender.toJson(),
       "type": type,
       "status": status,
+      "postId": postId,
       "createdAt": createdAt.toIso8601String(),
     };
   }
 }
+

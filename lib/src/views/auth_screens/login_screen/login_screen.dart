@@ -111,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Icon(Icons.link, size: screenWidth * 0.18, color: AppColors.primary),
                 SizedBox(height: screenHeight * 0.02),
                 CustomTextWidget(
-                  text: "Linkio",
+                  text: "LinkedIo",
                   fontSize: screenWidth * 0.08,
                   fontWeight: FontWeight.w700,
                 ),

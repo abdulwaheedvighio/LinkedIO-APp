@@ -9,6 +9,7 @@ import 'package:link_io/src/services/post_provider_service.dart';
 import 'package:link_io/src/views/nav_bar_screens/home_page_screen/friend_profile_screen/friend_profile_screen.dart';
 import 'package:link_io/src/widget/custom_text_widget.dart';
 import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart';
 
 class PostCardWidget extends StatefulWidget {
   final post.PostModel postItem;
@@ -23,13 +24,46 @@ class _PostCardWidgetState extends State<PostCardWidget> {
   late bool isLiked;
   late int likeCount;
 
+  VideoPlayerController? _videoController;
+  Future<void>? _initializeVideoPlayerFuture;
+
   @override
   void initState() {
     super.initState();
+
     final userId =
         Provider.of<UserDetailProvider>(context, listen: false).currentUser!.id;
     isLiked = widget.postItem.likes.any((like) => like.userId == userId);
     likeCount = widget.postItem.likes.length;
+
+    // 🎥 Agar media video hai to init karo
+    if (widget.postItem.media != null &&
+        widget.postItem.media!.type == "video" &&
+        widget.postItem.media!.url.isNotEmpty) {
+      _videoController =
+          VideoPlayerController.network(widget.postItem.media!.url);
+      _initializeVideoPlayerFuture = _videoController!.initialize().then((_) {
+        setState(() {});
+      });
+      _videoController!.setLooping(false);
+      _videoController!.addListener(() {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
+  }
+
+  /// Format mm:ss
+  String _formatDuration(Duration d) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    final minutes = twoDigits(d.inMinutes.remainder(60));
+    final seconds = twoDigits(d.inSeconds.remainder(60));
+    return "$minutes:$seconds";
   }
 
   @override
@@ -47,16 +81,17 @@ class _PostCardWidgetState extends State<PostCardWidget> {
             backgroundImage: (widget.postItem.user.profileImage != null &&
                 widget.postItem.user.profileImage!.isNotEmpty)
                 ? NetworkImage(widget.postItem.user.profileImage!)
-                : const AssetImage("assets/image/default.jpg")
-            as ImageProvider,
+                : const AssetImage("assets/image/default.jpg") as ImageProvider,
           ),
           title: GestureDetector(
             onTap: () {
               Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) =>
-                          FriendProfileScreen(user: widget.postItem.user)));
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      FriendProfileScreen(user: widget.postItem.user),
+                ),
+              );
             },
             child: CustomTextWidget(
               text: widget.postItem.user.fullName,
@@ -70,19 +105,23 @@ class _PostCardWidgetState extends State<PostCardWidget> {
           ),
         ),
 
-        // ✅ Post Image
-        if (widget.postItem.image != null)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(1),
-            child: Image.network(
-              widget.postItem.image!,
-              width: double.infinity,
-              height: 400,
-              fit: BoxFit.cover,
+        // ✅ Media (Video/Image)
+        if (widget.postItem.media != null) ...[
+          if (widget.postItem.media!.type == "video")
+            _buildVideoPlayer()
+          else if (widget.postItem.media!.type == "image")
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.network(
+                widget.postItem.media!.url,
+                width: double.infinity,
+                height: 400,
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
+        ],
 
-        // ✅ Actions Row
+        // ✅ Actions
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Row(
@@ -93,18 +132,10 @@ class _PostCardWidgetState extends State<PostCardWidget> {
                   color: Colors.red,
                 ),
                 onPressed: () async {
-                  // 🔥 Instant UI update
                   setState(() {
-                    if (isLiked) {
-                      isLiked = false;
-                      likeCount--;
-                    } else {
-                      isLiked = true;
-                      likeCount++;
-                    }
+                    isLiked = !isLiked;
+                    likeCount += isLiked ? 1 : -1;
                   });
-
-                  // 🔄 Backend update
                   await postProvider.likePost(widget.postItem.id, context);
                 },
               ),
@@ -121,7 +152,7 @@ class _PostCardWidgetState extends State<PostCardWidget> {
           ),
         ),
 
-        // ✅ Like Count
+        // ✅ Likes count
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: CustomTextWidget(
@@ -164,7 +195,7 @@ class _PostCardWidgetState extends State<PostCardWidget> {
             ),
           ),
 
-        // ✅ Comments & Time
+        // ✅ Comments & time
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: Text(
@@ -172,9 +203,79 @@ class _PostCardWidgetState extends State<PostCardWidget> {
             style: const TextStyle(color: Colors.grey, fontSize: 12),
           ),
         ),
-
         const SizedBox(height: 12),
       ],
+    );
+  }
+
+  /// 🎥 Video Player Widget
+  Widget _buildVideoPlayer() {
+    return FutureBuilder(
+      future: _initializeVideoPlayerFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done &&
+            _videoController != null &&
+            _videoController!.value.isInitialized) {
+          final position = _videoController!.value.position;
+          final duration = _videoController!.value.duration;
+
+          return Column(
+            children: [
+              AspectRatio(
+                aspectRatio: _videoController!.value.aspectRatio,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    VideoPlayer(_videoController!),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          if (_videoController!.value.isPlaying) {
+                            _videoController!.pause();
+                          } else {
+                            _videoController!.play();
+                          }
+                        });
+                      },
+                      child: Icon(
+                        _videoController!.value.isPlaying
+                            ? Icons.pause_circle
+                            : Icons.play_circle,
+                        color: Colors.white.withOpacity(0.8),
+                        size: 60,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  "${_formatDuration(position)} / ${_formatDuration(duration)}",
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
+              VideoProgressIndicator(
+                _videoController!,
+                allowScrubbing: true,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                colors: VideoProgressColors(
+                  playedColor: Colors.blue,
+                  bufferedColor: Colors.grey,
+                  backgroundColor: Colors.black12,
+                ),
+              ),
+            ],
+          );
+        }
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: CircularProgressIndicator(),
+          ),
+        );
+      },
     );
   }
 
@@ -212,9 +313,7 @@ class _PostCardWidgetState extends State<PostCardWidget> {
               builder: (_, scrollController) {
                 return Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? AppColors.darkCard
-                        : AppColors.lightCard,
+                    color: isDark ? AppColors.darkCard : AppColors.lightCard,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(20),
                       topRight: Radius.circular(20),
@@ -281,8 +380,7 @@ class _PostCardWidgetState extends State<PostCardWidget> {
                                           style: TextButton.styleFrom(
                                             padding: EdgeInsets.zero,
                                             minimumSize: const Size(40, 20),
-                                            tapTargetSize:
-                                            MaterialTapTargetSize.shrinkWrap,
+                                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                           ),
                                           child: const Text(
                                             "Reply",
@@ -309,8 +407,9 @@ class _PostCardWidgetState extends State<PostCardWidget> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color:
-                            isDark ? AppColors.darkCard : AppColors.lightCard,
+                            color: isDark
+                                ? AppColors.darkCard
+                                : AppColors.lightCard,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
@@ -339,13 +438,11 @@ class _PostCardWidgetState extends State<PostCardWidget> {
                                 onPressed: () async {
                                   final text = commentController.text.trim();
                                   if (text.isNotEmpty) {
-                                    // ✅ Optimistic UI update
                                     setState(() {
                                       postItem.comments.insert(
                                         0,
                                         post.CommentModel(
-                                          id: DateTime.now()
-                                              .toIso8601String(),
+                                          id: DateTime.now().toIso8601String(),
                                           text: text,
                                           user: post.UserModel(
                                             id: currentUser.id,
@@ -360,8 +457,6 @@ class _PostCardWidgetState extends State<PostCardWidget> {
                                     });
 
                                     commentController.clear();
-
-                                    // ✅ Send to server
                                     await postProvider.addComment(
                                         postItem.id, text, context);
                                   }

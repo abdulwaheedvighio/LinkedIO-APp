@@ -179,31 +179,31 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               const SizedBox(height: 20),
 
               // ✅ Posts Grid
-              postProvider.isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : postProvider.posts.isEmpty
-                  ? const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Text("No posts yet."),
-                ),
-              )
-                  : GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: postProvider.userPosts.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 2,
-                  crossAxisSpacing: 2,
-                ),
-                itemBuilder: (context, index) {
-                  final post = postProvider.userPosts[index];
-                  return (post.image != null && post.image!.isNotEmpty)
-                      ? Image.network(post.image!, fit: BoxFit.cover)
-                      : Image.asset("assets/image/default.jpg", fit: BoxFit.cover);
-                },
-              ),
+              // postProvider.isLoading
+              //     ? const Center(child: CircularProgressIndicator())
+              //     : postProvider.posts.isEmpty
+              //     ? const Center(
+              //   child: Padding(
+              //     padding: EdgeInsets.all(20),
+              //     child: Text("No posts yet."),
+              //   ),
+              // )
+              //     : GridView.builder(
+              //   shrinkWrap: true,
+              //   physics: const NeverScrollableScrollPhysics(),
+              //   itemCount: postProvider.userPosts.length,
+              //   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              //     crossAxisCount: 3,
+              //     mainAxisSpacing: 2,
+              //     crossAxisSpacing: 2,
+              //   ),
+              //   itemBuilder: (context, index) {
+              //     final post = postProvider.userPosts[index];
+              //     return (post.media != null && post.media!.isNotEmpty)
+              //         ? Image.network(post.media!, fit: BoxFit.cover)
+              //         : Image.asset("assets/image/default.jpg", fit: BoxFit.cover);
+              //   },
+              // ),
             ],
           ),
         ),

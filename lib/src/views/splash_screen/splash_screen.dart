@@ -1,9 +1,9 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:link_io/src/core/constants/app_colors.dart';
-import 'package:link_io/src/core/constants/app_fonts.dart';
 import 'package:link_io/src/views/onboarding_screen/onboarding_screen.dart';
 import 'package:link_io/src/widget/custom_text_widget.dart';
+import 'dart:async';
+
 
 class SplashScreen extends StatefulWidget {
   static const routeName = "/SplashScreen";
@@ -19,7 +19,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
 
     //Simulate loading, then navigate
-    Timer(const Duration(seconds: 3), () {
+    Timer(const Duration(seconds: 8), () {
       Navigator.pushReplacementNamed(context, OnboardingScreen.routeName);
     });
   }
@@ -53,7 +53,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
             // App Name
             CustomTextWidget(
-              text: 'Linkio',
+              text: 'LinkedIo',
               fontSize: 30,
               fontWeight: FontWeight.bold,
               color: isDark ? Colors.white : AppColors.primary,

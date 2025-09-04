@@ -50,6 +50,8 @@ dependencies:
   ionicons: ^0.2.2
   card_loading: ^0.3.2
   shimmer: ^3.0.0
+  timeago: ^3.7.1
+  video_player: ^2.10.0
 
 
 dev_dependencies:

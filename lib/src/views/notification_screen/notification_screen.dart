@@ -4,6 +4,7 @@ import 'package:link_io/src/core/constants/app_fonts.dart';
 import 'package:link_io/src/services/user_auth_service.dart';
 import 'package:link_io/src/widget/custom_text_widget.dart';
 import 'package:provider/provider.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -35,8 +36,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  Future<void> _respondToRequest(
-      String notificationId, String action) async {
+  Future<void> _respondToRequest(String notificationId, String action) async {
     final userAuthService =
     Provider.of<UserAuthService>(context, listen: false);
 
@@ -53,10 +53,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
 
     if (res['success']) {
-      // agar accept ya reject success ho gaya toh list se remove kar do
       setState(() {
-        notifications.removeWhere(
-                (n) => n['_id'] == notificationId);
+        notifications.removeWhere((n) => n['_id'] == notificationId);
       });
     }
   }
@@ -66,14 +64,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightCard,
-
+      backgroundColor:
+      isDark ? AppColors.darkBackground : AppColors.lightBackground,
       appBar: AppBar(
         title: const Text("Notifications"),
         centerTitle: true,
         elevation: 0,
       ),
-     // backgroundColor: isDark ? Colors.black : Colors.grey.shade100,
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : notifications.isEmpty
@@ -83,56 +80,43 @@ class _NotificationScreenState extends State<NotificationScreen> {
           style: TextStyle(fontSize: 16),
         ),
       )
-          : ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: notifications.length,
-        itemBuilder: (context, index) {
-          final notif = notifications[index];
-          return _buildNotificationCard(notif, isDark);
-        },
+          : RefreshIndicator(
+        onRefresh: _loadNotifications,
+        child: ListView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: notifications.length,
+          itemBuilder: (context, index) {
+            final notif = notifications[index];
+            return _buildNotificationCard(notif, isDark);
+          },
+        ),
       ),
     );
   }
 
   Widget _buildNotificationCard(Map<String, dynamic> notif, bool isDark) {
-    IconData icon;
-    Color iconColor;
+    final senderName = notif['sender']?['fullName'] ?? "Unknown";
+    final profileImage = notif['sender']?['profileImage'] ??
+        "https://i.pravatar.cc/150?img=1";
+    final type = notif['type'] ?? "";
+    final createdAt = DateTime.tryParse(notif['createdAt'] ?? "");
 
-    switch (notif['type']) {
-      case "like":
-        icon = Icons.favorite;
-        iconColor = Colors.redAccent;
-        break;
-      case "comment":
-        icon = Icons.comment;
-        iconColor = Colors.blue;
-        break;
-      case "follow":
-      case "friend_request":
-        icon = Icons.person_add;
-        iconColor = Colors.green;
-        break;
-      default:
-        icon = Icons.notifications;
-        iconColor = Colors.grey;
-    }
+    final iconData = _getIcon(type).$1;
+    final iconColor = _getIcon(type).$2;
+    final message = _getMessage(type);
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 6),
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       color: isDark ? AppColors.darkCard : AppColors.lightCard,
-
       child: ListTile(
         contentPadding: const EdgeInsets.all(12),
         leading: Stack(
           children: [
             CircleAvatar(
-              backgroundImage: NetworkImage(
-                notif['sender']?['profileImage'] ??
-                    "https://i.pravatar.cc/150?img=1",
-              ),
-              radius: 28,
+              backgroundImage: NetworkImage(profileImage),
+              radius: 26,
             ),
             Positioned(
               bottom: 0,
@@ -140,7 +124,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               child: CircleAvatar(
                 radius: 10,
                 backgroundColor: isDark ? Colors.black : Colors.white,
-                child: Icon(icon, size: 14, color: iconColor),
+                child: Icon(iconData, size: 14, color: iconColor),
               ),
             )
           ],
@@ -150,54 +134,79 @@ class _NotificationScreenState extends State<NotificationScreen> {
             style: TextStyle(
               color: isDark ? Colors.white : Colors.black,
               fontSize: 14,
+              fontFamily: AppFonts.poppinsFont,
             ),
             children: [
               TextSpan(
-                text: notif['sender']?['fullName'] ?? "Unknown",
-                style: const TextStyle(fontWeight: FontWeight.bold,fontFamily: AppFonts.poppinsFont),
+                text: senderName,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              TextSpan(text: _getMessage(notif['type'] ?? ""),style: TextStyle(fontFamily: AppFonts.poppinsFont,fontSize: 11)),
+              TextSpan(text: message),
             ],
           ),
         ),
-        trailing: notif['type'] == "follow" || notif['type'] == "friend_request"
+        subtitle: createdAt != null
+            ? Text(
+          timeago.format(createdAt),
+          style: TextStyle(
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+            fontSize: 12,
+          ),
+        )
+            : null,
+        trailing: (type == "follow" || type == "friend_request")
             ? Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ElevatedButton(
-              onPressed: () => _respondToRequest(
-                  notif['_id'], "accept"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              child: CustomTextWidget(text: "Accept",),
+            _buildActionButton(
+              label: "Accept",
+              color: AppColors.primary,
+              onTap: () => _respondToRequest(notif['_id'], "accept"),
             ),
             const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () => _respondToRequest(
-                  notif['_id'], "reject"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              child: const CustomTextWidget(text: "Accept",),
+            _buildActionButton(
+              label: "Reject",
+              color: AppColors.error,
+              onTap: () => _respondToRequest(notif['_id'], "reject"),
             ),
           ],
         )
             : null,
       ),
     );
+  }
+
+  Widget _buildActionButton({
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      child: CustomTextWidget(text: label),
+    );
+  }
+
+  (IconData, Color) _getIcon(String type) {
+    switch (type) {
+      case "like":
+        return (Icons.favorite, Colors.redAccent);
+      case "comment":
+        return (Icons.comment, Colors.blue);
+      case "follow":
+      case "friend_request":
+        return (Icons.person_add, Colors.green);
+      default:
+        return (Icons.notifications, Colors.grey);
+    }
   }
 
   String _getMessage(String type) {

@@ -268,21 +268,43 @@ class UserAuthService with ChangeNotifier {
     try {
       final userDetailProvider =
       Provider.of<UserDetailProvider>(context, listen: false);
-      final token = userDetailProvider.currentUser?.token ?? '';
+
+      final token = userDetailProvider.currentUser?.token;
+
+      if (token == null || token.isEmpty) {
+        debugPrint("❌ No token found. User might not be logged in.");
+        return [];
+      }
+
       final url = Uri.parse("http://10.0.2.2:8000/api/users/notifications");
 
-      final response = await http.get(url, headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      });
+      final response = await http.get(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
 
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['success'] == true) {
-        return List<Map<String, dynamic>>.from(data['notifications'] ?? []);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data is Map<String, dynamic> && data['success'] == true) {
+          return List<Map<String, dynamic>>.from(data['notifications'] ?? []);
+        } else {
+          debugPrint("⚠️ API responded but success == false: $data");
+        }
+      } else {
+        debugPrint("⚠️ Failed to fetch notifications. "
+            "Status Code: ${response.statusCode}, Body: ${response.body}");
       }
+
       return [];
-    } catch (_) {
+    } catch (e, stackTrace) {
+      debugPrint("❌ Error fetching notifications: $e");
+      debugPrint(stackTrace.toString());
       return [];
     }
   }
+
 }

@@ -25,7 +25,8 @@ class PostProviderService with ChangeNotifier {
   Future<bool> uploadPost({
     required String caption,
     required List<String> hashtags,
-    File? image,
+    File? file, // ✅ ab image/video dono handle karega
+    required bool isVideo,
     required BuildContext context,
   }) async {
     _setLoading(true);
@@ -43,9 +44,9 @@ class PostProviderService with ChangeNotifier {
       request.fields['caption'] = caption;
       request.fields['hashtags'] = hashtags.join(',');
 
-      if (image != null) {
-        request.files
-            .add(await http.MultipartFile.fromPath("image", image.path));
+      if (file != null) {
+        // ✅ backend `req.file` expect kar raha hai
+        request.files.add(await http.MultipartFile.fromPath("file", file.path));
       }
 
       final response = await request.send();
@@ -56,13 +57,16 @@ class PostProviderService with ChangeNotifier {
         return true;
       } else {
         _setError("Upload failed: $resBody");
+        print(resBody.toString());
         return false;
       }
     } catch (error) {
       _setError(error.toString());
+      print(error.toString());
       return false;
     }
   }
+
 
   // ================= Get All Posts ================= //
   Future<void> getPosts({required BuildContext context}) async {
