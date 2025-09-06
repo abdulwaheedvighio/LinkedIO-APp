@@ -80,8 +80,8 @@ class _PostCardWidgetState extends State<PostCardWidget> {
             radius: 25,
             backgroundImage: (widget.postItem.user.profileImage != null &&
                 widget.postItem.user.profileImage!.isNotEmpty)
-                ? NetworkImage(widget.postItem.user.profileImage!)
-                : const AssetImage("assets/image/default.jpg") as ImageProvider,
+                ? NetworkImage(widget.postItem.user.profileImage!,)
+                : const AssetImage("assets/image/default.jpg",) as ImageProvider,
           ),
           title: GestureDetector(
             onTap: () {

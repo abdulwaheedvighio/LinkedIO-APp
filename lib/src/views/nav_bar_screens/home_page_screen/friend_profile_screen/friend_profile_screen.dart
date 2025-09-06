@@ -275,29 +275,35 @@ class _FriendProfileScreenState extends State<FriendProfileScreen>
                   final post = postProvider.userPosts[index];
                   return GestureDetector(
                     onTap: () {
-                      // Navigator.push(
-                      //   context,
-                      //   MaterialPageRoute(
-                      //     builder: (_) => FullScreenGalleryView(
-                      //       images: postProvider.userPosts
-                      //           .map((p) => p.image ?? "")
-                      //           .where((url) => url.isNotEmpty)
-                      //           .toList(),
-                      //       initialIndex: index,
-                      //     ),
-                      //   ),
-                      // );
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FullScreenGalleryView(
+                            images: postProvider.userPosts
+                                .map((p) => p.media?.type == "image" ? p.media?.url ?? "" : "")
+                                .where((url) => url.isNotEmpty)
+                                .toList(),
+                            initialIndex: index,
+                          ),
+                        ),
+                      );
                     },
-                    // child: Hero(
-                    //   tag: '${post.id}_$index',
-                    //   child: (post.image != null &&
-                    //       post.image!.isNotEmpty)
-                    //       ? Image.network(post.image!,
-                    //       fit: BoxFit.cover)
-                    //       : Image.asset("assets/image/default.jpg",
-                    //       fit: BoxFit.cover),
-                    // ),
+                    child: Hero(
+                      tag: '${post.id}_$index',
+                      child: (post.media != null &&
+                          post.media!.url.isNotEmpty &&
+                          post.media!.type == "image")
+                          ? Image.network(
+                        post.media!.url,
+                        fit: BoxFit.cover,
+                      )
+                          : Image.asset(
+                        "assets/image/default.jpg",
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   );
+
                 },
               ),
             ],

@@ -4,6 +4,7 @@ import 'package:link_io/src/core/constants/app_theme.dart';
 import 'package:link_io/src/core/utils/utils.dart';
 import 'package:link_io/src/provider/user_detail_provider.dart';
 import 'package:link_io/src/services/post_provider_service.dart';
+import 'package:link_io/src/services/story_provider_service.dart';
 import 'package:link_io/src/services/user_auth_service.dart';
 import 'package:link_io/src/views/auth_screens/login_screen/login_screen.dart';
 import 'package:link_io/src/views/auth_screens/sign_up_screen/sign_up_screen.dart';
@@ -36,6 +37,9 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
             create: (context) => PostProviderService(),
+        ),
+        ChangeNotifierProvider(
+            create: (context) => StoryProviderService(),
         ),
       ],
       child: MaterialApp(
